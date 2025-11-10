@@ -15,6 +15,8 @@ namespace SmartPOS.UI
         private string? _searchQuery;
         private string _currentUserDisplay = "Cashier: Admin";
 
+        private const double TaxRate = 0.16; // 16% VAT
+
         public ObservableCollection<Product> Products
         {
             get => _products;
@@ -44,7 +46,11 @@ namespace SmartPOS.UI
             set { _currentUserDisplay = value; OnPropertyChanged(); }
         }
 
-        public string TotalDisplay => $"Total: Ksh {CartItems.Sum(c => c.TotalPrice):N2}";
+        public double Subtotal => CartItems.Sum(c => c.TotalPrice);
+        public double Tax => Subtotal * TaxRate;
+        public double TotalWithTax => Subtotal + Tax;
+
+        public string TotalDisplay => $"Subtotal: Ksh {Subtotal:N2}\nTax: Ksh {Tax:N2}\nTotal: Ksh {TotalWithTax:N2}";
 
         // Commands
         public ICommand AddToCartCommand { get; }
@@ -126,7 +132,15 @@ namespace SmartPOS.UI
                 MessageBox.Show("Cart is empty.", "Checkout", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            MessageBox.Show($"Processing card payment of Ksh {CartItems.Sum(c => c.TotalPrice):N2}...", "Checkout", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            // Generate receipt
+            var receipt = GenerateReceipt();
+            MessageBox.Show(receipt.GenerateTextReceipt(), "Receipt", MessageBoxButton.OK);
+
+            // TODO: Deduct stock quantities here
+            // foreach (var item in CartItems)
+            //     item.Product.StockQty -= item.Quantity;
+
             CartItems.Clear();
             OnPropertyChanged(nameof(TotalDisplay));
         }
@@ -138,7 +152,15 @@ namespace SmartPOS.UI
                 MessageBox.Show("Cart is empty.", "Checkout", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            MessageBox.Show($"Payment received in cash: Ksh {CartItems.Sum(c => c.TotalPrice):N2}", "Checkout", MessageBoxButton.OK, MessageBoxImage.Information);
+
+            // Generate receipt
+            var receipt = GenerateReceipt();
+            MessageBox.Show(receipt.GenerateTextReceipt(), "Receipt", MessageBoxButton.OK);
+
+            // TODO: Deduct stock quantities here
+            // foreach (var item in CartItems)
+            //     item.Product.StockQty -= item.Quantity;
+
             CartItems.Clear();
             OnPropertyChanged(nameof(TotalDisplay));
         }
@@ -152,6 +174,18 @@ namespace SmartPOS.UI
         private void SearchBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter) FilterProducts();
+        }
+
+        // Generate receipt
+        private Receipt GenerateReceipt()
+        {
+            return new Receipt
+            {
+                Items = new ObservableCollection<CartItem>(CartItems),
+                Subtotal = Subtotal,
+                Tax = Tax,
+                Total = TotalWithTax
+            };
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -168,6 +202,8 @@ namespace SmartPOS.UI
         public double Price { get; set; }
         public string ImagePath { get; set; }
         public string PriceDisplay => $"{Price:N2}";
+        // Optional stock for future inventory management
+        public int StockQty { get; set; } = 100;
 
         public Product(string name, double price, string imagePath)
         {
@@ -215,6 +251,37 @@ namespace SmartPOS.UI
             new Product("Soap Bar", 150, "Images/soap.png"),
             new Product("Toothpaste", 200, "Images/toothpaste.png"),
         };
+    }
+
+    // Receipt class
+    public class Receipt
+    {
+        public string ReceiptNumber { get; set; } = Guid.NewGuid().ToString().Substring(0, 8);
+        public DateTime Date { get; set; } = DateTime.Now;
+        public ObservableCollection<CartItem> Items { get; set; } = new();
+        public double Subtotal { get; set; }
+        public double Tax { get; set; }
+        public double Total { get; set; }
+
+        public string GenerateTextReceipt()
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("=== SMARTPOS RECEIPT ===");
+            sb.AppendLine($"Receipt #: {ReceiptNumber}");
+            sb.AppendLine($"Date: {Date}");
+            sb.AppendLine("-----------------------");
+
+            foreach (var item in Items)
+                sb.AppendLine($"{item.Product.Name} x{item.Quantity} - {item.TotalPrice:N2}");
+
+            sb.AppendLine("-----------------------");
+            sb.AppendLine($"Subtotal: {Subtotal:N2}");
+            sb.AppendLine($"Tax: {Tax:N2}");
+            sb.AppendLine($"TOTAL: {Total:N2}");
+            sb.AppendLine("=======================");
+            sb.AppendLine("Thank you for shopping!");
+            return sb.ToString();
+        }
     }
 
     // RelayCommand for WPF
