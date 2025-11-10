@@ -1,17 +1,17 @@
 {
   "format": 1,
   "restore": {
-    "C:\\Users\\user\\Documents\\Projects\\SmartPOS.UI\\SmartPOS.UI.csproj": {}
+    "C:\\Users\\user\\Documents\\Projects\\SmartPOS.UI\\POS-System-CSharp\\SmartPOS.UI.csproj": {}
   },
   "projects": {
-    "C:\\Users\\user\\Documents\\Projects\\SmartPOS.UI\\SmartPOS.UI.csproj": {
+    "C:\\Users\\user\\Documents\\Projects\\SmartPOS.UI\\POS-System-CSharp\\SmartPOS.UI.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "C:\\Users\\user\\Documents\\Projects\\SmartPOS.UI\\SmartPOS.UI.csproj",
+        "projectUniqueName": "C:\\Users\\user\\Documents\\Projects\\SmartPOS.UI\\POS-System-CSharp\\SmartPOS.UI.csproj",
         "projectName": "SmartPOS.UI",
-        "projectPath": "C:\\Users\\user\\Documents\\Projects\\SmartPOS.UI\\SmartPOS.UI.csproj",
+        "projectPath": "C:\\Users\\user\\Documents\\Projects\\SmartPOS.UI\\POS-System-CSharp\\SmartPOS.UI.csproj",
         "packagesPath": "C:\\Users\\user\\.nuget\\packages\\",
-        "outputPath": "C:\\Users\\user\\Documents\\Projects\\SmartPOS.UI\\obj\\",
+        "outputPath": "C:\\Users\\user\\Documents\\Projects\\SmartPOS.UI\\POS-System-CSharp\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "C:\\Users\\user\\AppData\\Roaming\\NuGet\\NuGet.Config"
@@ -43,6 +43,12 @@
       "frameworks": {
         "net10.0-windows7.0": {
           "targetAlias": "net10.0-windows",
+          "dependencies": {
+            "System.Drawing.Common": {
+              "target": "Package",
+              "version": "[9.0.10, )"
+            }
+          },
           "imports": [
             "net461",
             "net462",
