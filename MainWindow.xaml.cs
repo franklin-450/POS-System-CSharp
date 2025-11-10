@@ -10,6 +10,10 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Controls;
 using System.Windows.Media;
+using System.Net;
+using System.Net.Sockets;
+using System.Text.Json;
+using System.IO;
 
 namespace SmartPOS.UI
 {
@@ -59,7 +63,6 @@ namespace SmartPOS.UI
         public ICommand CmdCheckoutCash { get; }
         public ICommand CmdHold { get; }
 
-        // Example barcodes
         private readonly Dictionary<string, string> BarcodeMap = new()
         {
             { "8901234567890", "Coca Cola 500ml" },
@@ -67,15 +70,23 @@ namespace SmartPOS.UI
             { "8901234567892", "Milk 1L" }
         };
 
+        private UdpClient? _udpListener;
+        private readonly int BroadcastPort = 50000;
+        private readonly Guid _instanceId = Guid.NewGuid();
+
         public MainWindow()
         {
             InitializeComponent();
             DataContext = this;
 
+            // Load products from ProductDatabase
+            ProductDatabase.Load();
             Products = new ObservableCollection<Product>(ProductDatabase.DefaultList);
+
             CartItems = new ObservableCollection<CartItem>();
             CartItems.CollectionChanged += (s, e) => OnPropertyChanged(nameof(TotalDisplay));
 
+            // Commands
             AddToCartCommand = new RelayCommand(obj => { if (obj is Product p) AddToCart(p); });
             RemoveFromCartCommand = new RelayCommand(obj => { if (obj is CartItem item) RemoveFromCart(item); });
             IncreaseQuantityCommand = new RelayCommand(obj => { if (obj is CartItem item) ChangeQuantity(item, 1); });
@@ -83,9 +94,12 @@ namespace SmartPOS.UI
             CmdCheckout = new RelayCommand(_ => Checkout("Card"));
             CmdCheckoutCash = new RelayCommand(_ => Checkout("Cash"));
             CmdHold = new RelayCommand(_ => HoldOrder());
+
+            // Start UDP listener
+            StartUdpListener();
         }
 
-        // 🟢 Toast notifications (fade in/out smartly)
+        // Toast notifications
         private async void ShowToast(string message)
         {
             try
@@ -104,10 +118,24 @@ namespace SmartPOS.UI
                 var fadeOut = new System.Windows.Media.Animation.DoubleAnimation(0, TimeSpan.FromSeconds(0.45));
                 ToastPanel.BeginAnimation(OpacityProperty, fadeOut);
             }
-            catch { /* ignore animation issues */ }
+            catch { }
         }
 
-        // 🧾 Barcode & Search logic
+        // Add Product button
+        private void BtnAddProduct_Click(object sender, RoutedEventArgs e)
+        {
+            var entryWindow = new ProductEntryWindow { Owner = this };
+            if (entryWindow.ShowDialog() == true)
+            {
+                var newProduct = new Product(entryWindow.ProductName, entryWindow.Price, entryWindow.ImagePath);
+                ProductDatabase.Add(newProduct);
+                Products.Add(newProduct);
+                ShowToast($"✅ Product '{entryWindow.ProductName}' added successfully!");
+                BroadcastProduct(entryWindow);
+            }
+        }
+
+        // Barcode search
         private void SearchBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key != Key.Enter) return;
@@ -123,8 +151,7 @@ namespace SmartPOS.UI
                     AddToCart(product);
                     ShowToast($"✅ Scanned: {product.Name} added to cart");
                 }
-                else
-                    ShowToast("❌ Barcode not found.");
+                else ShowToast("❌ Barcode not found.");
 
                 SearchQuery = string.Empty;
                 OnPropertyChanged(nameof(SearchQuery));
@@ -143,48 +170,39 @@ namespace SmartPOS.UI
                     ProductDatabase.DefaultList.Where(p => p.Name.Contains(q, StringComparison.OrdinalIgnoreCase)));
         }
 
-        // 🛒 Cart management
+        // Cart management
         private void AddToCart(Product product)
         {
             var existing = CartItems.FirstOrDefault(c => c.Product.Name == product.Name);
-            if (existing != null)
-                existing.Quantity++;
-            else
-                CartItems.Add(new CartItem(product));
-
+            if (existing != null) existing.Quantity++;
+            else CartItems.Add(new CartItem(product));
             OnPropertyChanged(nameof(TotalDisplay));
         }
 
         private void RemoveFromCart(CartItem item)
         {
-            if (CartItems.Contains(item))
-                CartItems.Remove(item);
+            if (CartItems.Contains(item)) CartItems.Remove(item);
             OnPropertyChanged(nameof(TotalDisplay));
         }
 
         private void ChangeQuantity(CartItem item, int delta)
         {
             item.Quantity += delta;
-            if (item.Quantity <= 0)
-                RemoveFromCart(item);
+            if (item.Quantity <= 0) RemoveFromCart(item);
             OnPropertyChanged(nameof(TotalDisplay));
         }
 
-        // 💳 Checkout + auto-print
+        // Checkout
         private async void Checkout(string method)
         {
-            if (!CartItems.Any())
-            {
-                ShowToast("🛑 Cart is empty.");
-                return;
-            }
+            if (!CartItems.Any()) { ShowToast("🛑 Cart is empty."); return; }
 
             var receipt = GenerateReceipt();
 
             try
             {
-                await Task.Delay(500); // small delay for smooth UI
-                PrintReceipt(receipt); // auto print
+                await Task.Delay(500);
+                PrintReceipt(receipt);
                 ShowToast($"✅ {method} payment complete. Printing receipt...");
             }
             catch (Exception ex)
@@ -196,34 +214,26 @@ namespace SmartPOS.UI
             OnPropertyChanged(nameof(TotalDisplay));
         }
 
-        private void HoldOrder()
-        {
-            ShowToast("⏸️ Order held for later.");
-        }
+        private void HoldOrder() => ShowToast("⏸️ Order held for later.");
 
-        // 🖨️ Auto printing (no prompt)
+        // Auto printing
         private void PrintReceipt(Receipt receipt)
         {
-            string text = receipt.GenerateTextReceipt();
-
             var tb = new TextBlock
             {
-                Text = text,
+                Text = receipt.GenerateTextReceipt(),
                 FontFamily = new FontFamily("Consolas"),
                 FontSize = 11,
                 TextWrapping = TextWrapping.Wrap,
                 Margin = new Thickness(20)
             };
-
             var pd = new PrintDialog();
             pd.PrintVisual(tb, "SmartPOS Receipt");
         }
 
-        // 🧾 Generate receipt object
         private Receipt GenerateReceipt() => new()
         {
-            Items = new ObservableCollection<CartItem>(
-                CartItems.Select(ci => new CartItem(ci.Product) { Quantity = ci.Quantity })),
+            Items = new ObservableCollection<CartItem>(CartItems.Select(ci => new CartItem(ci.Product) { Quantity = ci.Quantity })),
             Subtotal = Subtotal,
             Tax = Tax,
             Total = TotalWithTax
@@ -232,9 +242,106 @@ namespace SmartPOS.UI
         public event PropertyChangedEventHandler? PropertyChanged;
         private void OnPropertyChanged([CallerMemberName] string? n = null)
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
+
+        // UDP broadcast & listener
+        private void BroadcastProduct(ProductEntryWindow entryWindow)
+        {
+            try
+            {
+                var udpClient = new UdpClient { EnableBroadcast = true };
+                var dto = new
+                {
+                    InstanceId = _instanceId,
+                    Name = entryWindow.ProductName,
+                    Barcode = entryWindow.Barcode,
+                    Price = entryWindow.Price,
+                    VAT = entryWindow.VAT,
+                    ImageFileName = Path.GetFileName(entryWindow.ImagePath),
+                    ImageBase64 = File.Exists(entryWindow.ImagePath)
+                        ? Convert.ToBase64String(File.ReadAllBytes(entryWindow.ImagePath))
+                        : null
+                };
+                var json = JsonSerializer.Serialize(dto);
+                var bytes = Encoding.UTF8.GetBytes(json);
+                udpClient.Send(bytes, bytes.Length, new IPEndPoint(IPAddress.Broadcast, BroadcastPort));
+                udpClient.Close();
+            }
+            catch (Exception ex)
+            {
+                Dispatcher.Invoke(() => ShowToast($"Broadcast failed: {ex.Message}"));
+            }
+        }
+
+        private void StartUdpListener()
+        {
+            try
+            {
+                _udpListener = new UdpClient(BroadcastPort) { EnableBroadcast = true };
+                Task.Run(async () =>
+                {
+                    while (true)
+                    {
+                        try
+                        {
+                            var result = await _udpListener.ReceiveAsync();
+                            var json = Encoding.UTF8.GetString(result.Buffer);
+                            ProcessIncomingProduct(json);
+                        }
+                        catch { }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Dispatcher.Invoke(() => ShowToast($"UDP listener failed: {ex.Message}"));
+            }
+        }
+
+        private void ProcessIncomingProduct(string json)
+        {
+            try
+            {
+                var dto = JsonSerializer.Deserialize<ProductBroadcastDto>(json);
+                if (dto == null || dto.InstanceId == _instanceId) return;
+
+                string? localRelative = null;
+                if (!string.IsNullOrWhiteSpace(dto.ImageBase64) && !string.IsNullOrWhiteSpace(dto.ImageFileName))
+                {
+                    var imagesDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Images");
+                    if (!Directory.Exists(imagesDir)) Directory.CreateDirectory(imagesDir);
+                    var dest = Path.Combine(imagesDir, dto.ImageFileName);
+                    if (!File.Exists(dest))
+                        File.WriteAllBytes(dest, Convert.FromBase64String(dto.ImageBase64));
+                    localRelative = Path.Combine("Images", dto.ImageFileName);
+                }
+
+                Dispatcher.Invoke(() =>
+                {
+                    var exists = ProductDatabase.DefaultList.Any(p => p.Name == dto.Name);
+                    if (!exists)
+                    {
+                        ProductDatabase.DefaultList.Add(new Product(dto.Name ?? "Unknown", dto.Price, localRelative ?? ""));
+                        ShowToast($"Product received: {dto.Name}");
+                    }
+                });
+            }
+            catch { }
+        }
+
+        private class ProductBroadcastDto
+        {
+            public Guid InstanceId { get; set; }
+            public string? Name { get; set; }
+            public string? Barcode { get; set; }
+            public double Price { get; set; }
+            public double VAT { get; set; }
+            public string? Description { get; set; }
+            public string? ImageFileName { get; set; }
+            public string? ImageBase64 { get; set; }
+        }
     }
 
-    // 📦 Models
+    // Cart & Product models
     public class Product
     {
         public string Name { get; set; }
@@ -257,22 +364,7 @@ namespace SmartPOS.UI
             => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
     }
 
-    public static class ProductDatabase
-    {
-public static readonly ObservableCollection<Product> DefaultList = new()
-{
-    new Product("Coca Cola 500ml", 80, "pack://application:,,,/Images/coke.png"),
-    new Product("Bread - Sliced", 120, "pack://application:,,,/Images/bread.png"),
-    new Product("Milk 1L", 100, "pack://application:,,,/Images/milk.png"),
-    new Product("Rice 2kg", 300, "pack://application:,,,/Images/rice.png"),
-    new Product("Cooking Oil 1L", 450, "pack://application:,,,/Images/oil.png"),
-    new Product("Sugar 1kg", 250, "pack://application:,,,/Images/sugar.png"),
-    new Product("Soap Bar", 150, "pack://application:,,,/Images/soap.png"),
-    new Product("Toothpaste", 200, "pack://application:,,,/Images/toothpaste.png"),
-};
-
-    }
-
+    // Receipt & Command
     public class Receipt
     {
         public string ReceiptNumber { get; set; } = Guid.NewGuid().ToString("N")[..8];

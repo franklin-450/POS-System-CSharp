@@ -5,7 +5,9 @@ C:\Users\user\Documents\Projects\SmartPOS.UI\POS-System-CSharp\bin\Debug\net10.0
 C:\Users\user\Documents\Projects\SmartPOS.UI\POS-System-CSharp\bin\Debug\net10.0-windows\SmartPOS.UI.pdb
 C:\Users\user\Documents\Projects\SmartPOS.UI\POS-System-CSharp\obj\Debug\net10.0-windows\SmartPOS.UI.csproj.AssemblyReference.cache
 C:\Users\user\Documents\Projects\SmartPOS.UI\POS-System-CSharp\obj\Debug\net10.0-windows\MainWindow.baml
+C:\Users\user\Documents\Projects\SmartPOS.UI\POS-System-CSharp\obj\Debug\net10.0-windows\ProductEntryWindow.baml
 C:\Users\user\Documents\Projects\SmartPOS.UI\POS-System-CSharp\obj\Debug\net10.0-windows\MainWindow.g.cs
+C:\Users\user\Documents\Projects\SmartPOS.UI\POS-System-CSharp\obj\Debug\net10.0-windows\ProductEntryWindow.g.cs
 C:\Users\user\Documents\Projects\SmartPOS.UI\POS-System-CSharp\obj\Debug\net10.0-windows\App.g.cs
 C:\Users\user\Documents\Projects\SmartPOS.UI\POS-System-CSharp\obj\Debug\net10.0-windows\SmartPOS.UI_MarkupCompile.cache
 C:\Users\user\Documents\Projects\SmartPOS.UI\POS-System-CSharp\obj\Debug\net10.0-windows\SmartPOS.UI.g.resources
