@@ -14,6 +14,11 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text.Json;
 using System.IO;
+using SmartPOS.UI.Models;
+using SmartPOS.UI.Data;
+using System.Speech.Synthesis;
+
+
 
 namespace SmartPOS.UI
 {
@@ -193,26 +198,52 @@ namespace SmartPOS.UI
         }
 
         // Checkout
-        private async void Checkout(string method)
+private void Checkout(string method)
+{
+    if (!CartItems.Any()) 
+    { 
+        ShowToast("🛑 Cart is empty."); 
+        return; 
+    }
+
+    var receipt = GenerateReceipt();
+
+    try
+    {
+        // Print the receipt
+        PrintReceipt(receipt);
+
+        // ✅ Show toast as before
+        ShowToast($"✅ {method} payment complete. Printing receipt...");
+
+        // ✅ Speak confirmation immediately, non-blocking
+        var synth = new SpeechSynthesizer();
+        synth.Volume = 100;  // 0-100
+        synth.Rate = 0;      // normal speed
+
+        // Select a female voice
+        foreach (var v in synth.GetInstalledVoices())
         {
-            if (!CartItems.Any()) { ShowToast("🛑 Cart is empty."); return; }
-
-            var receipt = GenerateReceipt();
-
-            try
+            if (v.VoiceInfo.Gender == VoiceGender.Female)
             {
-                await Task.Delay(500);
-                PrintReceipt(receipt);
-                ShowToast($"✅ {method} payment complete. Printing receipt...");
+                synth.SelectVoice(v.VoiceInfo.Name);
+                break;
             }
-            catch (Exception ex)
-            {
-                ShowToast($"⚠️ Print failed: {ex.Message}");
-            }
-
-            CartItems.Clear();
-            OnPropertyChanged(nameof(TotalDisplay));
         }
+
+        // Speak asynchronously so UI stays responsive
+        synth.SpeakAsync("Payments received successfully. Thank you for shopping with us");
+    }
+    catch (Exception ex)
+    {
+        ShowToast($"⚠️ Print failed: {ex.Message}");
+    }
+
+    // Clear cart
+    CartItems.Clear();
+    OnPropertyChanged(nameof(TotalDisplay));
+}
+
 
         private void HoldOrder() => ShowToast("⏸️ Order held for later.");
 
@@ -341,66 +372,4 @@ namespace SmartPOS.UI
         }
     }
 
-    // Cart & Product models
-    public class Product
-    {
-        public string Name { get; set; }
-        public double Price { get; set; }
-        public string ImagePath { get; set; }
-        public string PriceDisplay => $"{Price:N2}";
-        public int StockQty { get; set; } = 100;
-        public Product(string name, double price, string img) { Name = name; Price = price; ImagePath = img; }
-    }
-
-    public class CartItem : INotifyPropertyChanged
-    {
-        public Product Product { get; set; }
-        private int _quantity = 1;
-        public int Quantity { get => _quantity; set { _quantity = value; OnPropertyChanged(); OnPropertyChanged(nameof(TotalPrice)); } }
-        public double TotalPrice => Product.Price * Quantity;
-        public CartItem(Product p) { Product = p; }
-        public event PropertyChangedEventHandler? PropertyChanged;
-        private void OnPropertyChanged([CallerMemberName] string? n = null)
-            => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(n));
-    }
-
-    // Receipt & Command
-    public class Receipt
-    {
-        public string ReceiptNumber { get; set; } = Guid.NewGuid().ToString("N")[..8];
-        public DateTime Date { get; set; } = DateTime.Now;
-        public ObservableCollection<CartItem> Items { get; set; } = new();
-        public double Subtotal { get; set; }
-        public double Tax { get; set; }
-        public double Total { get; set; }
-
-        public string GenerateTextReceipt()
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine("========== SMARTPOS ==========");
-            sb.AppendLine($"Receipt #: {ReceiptNumber}");
-            sb.AppendLine($"Date: {Date:yyyy-MM-dd HH:mm}");
-            sb.AppendLine("--------------------------------");
-            foreach (var i in Items)
-                sb.AppendLine($"{i.Product.Name} x{i.Quantity}   {i.TotalPrice,10:N2}");
-            sb.AppendLine("--------------------------------");
-            sb.AppendLine($"Subtotal:   {Subtotal,10:N2}");
-            sb.AppendLine($"VAT (16%):  {Tax,10:N2}");
-            sb.AppendLine($"TOTAL:      {Total,10:N2}");
-            sb.AppendLine("================================");
-            sb.AppendLine("   THANK YOU FOR SHOPPING!   ");
-            sb.AppendLine("================================");
-            return sb.ToString();
-        }
-    }
-
-    public class RelayCommand : ICommand
-    {
-        private readonly Action<object?> _execute;
-        private readonly Predicate<object?>? _can;
-        public event EventHandler? CanExecuteChanged { add => CommandManager.RequerySuggested += value; remove => CommandManager.RequerySuggested -= value; }
-        public RelayCommand(Action<object?> exec, Predicate<object?>? can = null) { _execute = exec; _can = can; }
-        public bool CanExecute(object? p) => _can?.Invoke(p) ?? true;
-        public void Execute(object? p) => _execute(p);
-    }
 }

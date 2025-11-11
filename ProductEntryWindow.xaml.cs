@@ -8,6 +8,9 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media.Imaging;
 using Microsoft.Win32;
+using SmartPOS.UI.Models;
+using SmartPOS.UI.Data;
+
 
 namespace SmartPOS.UI
 {
@@ -120,7 +123,8 @@ namespace SmartPOS.UI
             // ✅ Save locally to product list for instant use
             var relativePath = dto.ImageFileName != null ? Path.Combine("Images", dto.ImageFileName) : "";
             // Add product to database (will auto-save to JSON)
-ProductDatabase.Add(new Product(dto.Name ?? "Unnamed", dto.Price, relativePath));
+// Add product to database (will auto-save to JSON)
+ProductDatabase.Add(new Product(dto.Name ?? "Unnamed", dto.Price, relativePath, dto.Barcode));
 
             // ✅ Broadcast product to all on LAN
             try
