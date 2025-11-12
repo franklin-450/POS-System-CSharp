@@ -1,0 +1,10 @@
+[
+  {
+    "Name": "milk",
+    "Barcode": "8901234567890",
+    "Price": 100,
+    "ImagePath": "Images\\3a8d1ecaf9144adeb71e8f0dd7647933.jpg",
+    "PriceDisplay": "100.00",
+    "StockQty": 100
+  }
+]

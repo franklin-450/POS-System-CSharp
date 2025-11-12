@@ -1,0 +1,22 @@
+[
+  {
+    "Date": "2025-11-12T12:56:34.8882541+03:00",
+    "Cashier": "Cashier: Admin",
+    "PaymentMethod": "Cash",
+    "TotalAmount": 116,
+    "Items": [
+      {
+        "Product": {
+          "Name": "milk",
+          "Barcode": "8901234567890",
+          "Price": 100,
+          "ImagePath": "Images\\3a8d1ecaf9144adeb71e8f0dd7647933.jpg",
+          "PriceDisplay": "100.00",
+          "StockQty": 100
+        },
+        "Quantity": 1,
+        "TotalPrice": 100
+      }
+    ]
+  }
+]

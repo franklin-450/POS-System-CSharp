@@ -1,0 +1,146 @@
+<Window x:Class="SmartPOS.UI.Reports.SalesReportWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Sales Report"
+        WindowStartupLocation="CenterScreen"
+        Height="600"
+        Width="950"
+        Background="#FFF9FBFD"
+        ResizeMode="CanResizeWithGrip">
+
+    <Border CornerRadius="12" Background="White" Padding="20" Margin="15"
+            Effect="{DynamicResource DropShadowEffect}">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Header -->
+            <DockPanel Grid.Row="0" Margin="0,0,0,15">
+                <TextBlock Text="📊 SmartPOS Sales Report"
+                           FontSize="24"
+                           FontWeight="Bold"
+                           Foreground="#2B4B80"
+                           DockPanel.Dock="Left" />
+                <Button Content="⨯"
+                        Background="Transparent"
+                        Foreground="#B00"
+                        FontWeight="Bold"
+                        FontSize="16"
+                        BorderThickness="0"
+                        HorizontalAlignment="Right"
+                        Click="CloseWindow_Click"/>
+            </DockPanel>
+
+            <!-- Filters Row -->
+<StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
+    <DatePicker x:Name="FilterDate"
+                Width="180"
+                FontSize="14"
+                BorderBrush="#2B4B80"
+                SelectedDateFormat="Short"
+                Margin="0,0,10,0"/>
+
+    <Button Content="🔍 Filter by Date"
+            Width="150"
+            Height="35"
+            FontWeight="SemiBold"
+            Background="#2B4B80"
+            Foreground="White"
+            BorderThickness="0"
+            Margin="0,0,10,0"
+            Click="FilterByDate_Click">
+        <Button.Resources>
+            <Style TargetType="Border">
+                <Setter Property="CornerRadius" Value="6"/>
+            </Style>
+        </Button.Resources>
+    </Button>
+
+    <Button Content="📅 Clear Filter"
+            Width="130"
+            Height="35"
+            Background="#F3F6FA"
+            Foreground="#2B4B80"
+            BorderBrush="#D0D6E0"
+            BorderThickness="1"
+            Margin="0,0,10,0"
+            Click="ClearFilter_Click">
+        <Button.Resources>
+            <Style TargetType="Border">
+                <Setter Property="CornerRadius" Value="6"/>
+            </Style>
+        </Button.Resources>
+    </Button>
+</StackPanel>
+
+
+            <!-- Data Grid -->
+            <Border Grid.Row="2"
+                    CornerRadius="8"
+                    BorderBrush="#E0E4EA"
+                    BorderThickness="1"
+                    Background="White"
+                    Padding="5">
+                <DataGrid x:Name="SalesGrid"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          IsReadOnly="True"
+                          HeadersVisibility="Column"
+                          GridLinesVisibility="None"
+                          RowBackground="#F9FBFD"
+                          AlternatingRowBackground="#FFFFFF"
+                          BorderThickness="0"
+                          SelectionMode="Single"
+                          FontSize="14">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Date" Binding="{Binding Date, StringFormat=d}" Width="150"/>
+                        <DataGridTextColumn Header="Cashier" Binding="{Binding Cashier}" Width="*"/>
+                        <DataGridTextColumn Header="Payment Method" Binding="{Binding PaymentMethod}" Width="150"/>
+                        <DataGridTextColumn Header="Total (Ksh)" Binding="{Binding TotalAmount, StringFormat=N2}" Width="150"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+
+            <!-- Summary Section -->
+            <Border Grid.Row="3"
+                    Background="#F3F6FA"
+                    Padding="10"
+                    CornerRadius="8"
+                    Margin="0,15,0,0"
+                    BorderBrush="#D0D6E0"
+                    BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0">
+                        <TextBlock Text="Total Transactions" FontWeight="Bold" Foreground="#2B4B80" FontSize="14"/>
+                        <TextBlock x:Name="TxtTotalTransactions" FontSize="16" FontWeight="SemiBold" Foreground="#111"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="Total Sales (Ksh)" FontWeight="Bold" Foreground="#2B4B80" FontSize="14"/>
+                        <TextBlock x:Name="TxtTotalSales" FontSize="16" FontWeight="SemiBold" Foreground="#111"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2">
+                        <TextBlock Text="Last Sale Date" FontWeight="Bold" Foreground="#2B4B80" FontSize="14"/>
+                        <TextBlock x:Name="TxtLastSale" FontSize="16" FontWeight="SemiBold" Foreground="#111"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+    </Border>
+
+    <!-- Drop Shadow Resource -->
+    <Window.Resources>
+        <DropShadowEffect x:Key="DropShadowEffect" BlurRadius="12" ShadowDepth="3" Color="#888"/>
+    </Window.Resources>
+</Window>

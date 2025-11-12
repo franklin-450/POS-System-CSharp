@@ -102,6 +102,7 @@ namespace SmartPOS.UI
 
             // Start UDP listener
             StartUdpListener();
+            SalesDatabase.Load();
         }
 
         // Toast notifications
@@ -189,6 +190,12 @@ namespace SmartPOS.UI
             if (CartItems.Contains(item)) CartItems.Remove(item);
             OnPropertyChanged(nameof(TotalDisplay));
         }
+        private void BtnOpenReport_Click(object sender, RoutedEventArgs e)
+{
+    var reportWindow = new Reports.SalesReportWindow();
+    reportWindow.ShowDialog();
+}
+
 
         private void ChangeQuantity(CartItem item, int delta)
         {
@@ -199,7 +206,20 @@ namespace SmartPOS.UI
 
         // Checkout
 private void Checkout(string method)
+        {
+    // After receipt printing and toast
+var saleRecord = new SaleRecord
 {
+    Date = DateTime.Now,
+    Cashier = CurrentUserDisplay,
+    PaymentMethod = method,
+    TotalAmount = TotalWithTax,
+    Items = new ObservableCollection<CartItem>(CartItems.Select(ci => 
+        new CartItem(ci.Product) { Quantity = ci.Quantity }))
+};
+
+SalesDatabase.Add(saleRecord);
+
     if (!CartItems.Any()) 
     { 
         ShowToast("🛑 Cart is empty."); 
