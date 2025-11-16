@@ -1,0 +1,153 @@
+<Window x:Class="SmartPOS.UI.CashierLoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Cashier Login"
+        Height="380" Width="400"
+        WindowStartupLocation="CenterScreen"
+        Background="#E3F2FD"
+        ResizeMode="NoResize">
+
+    <Window.Resources>
+        <!-- Rounded TextBox Style -->
+        <Style TargetType="TextBox">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ScrollViewer x:Name="PART_ContentHost"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Rounded PasswordBox Style -->
+        <Style TargetType="PasswordBox">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="PasswordBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6">
+                            <ScrollViewer x:Name="PART_ContentHost"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Rounded Button Style -->
+        <Style TargetType="Button">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                CornerRadius="6"
+                                Padding="10">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Border Width="350" Height="320"
+                Background="White"
+                CornerRadius="12"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Padding="20">
+            <Border.Effect>
+                <DropShadowEffect Color="Black"
+                                  Opacity="0.25"
+                                  BlurRadius="10"
+                                  ShadowDepth="4"/>
+            </Border.Effect>
+
+            <StackPanel>
+
+                <TextBlock Text="Cashier Login"
+                           FontSize="24"
+                           FontWeight="Bold"
+                           Foreground="#0D47A1"
+                           HorizontalAlignment="Center"
+                           Margin="0,0,0,20"/>
+
+                <!-- Username -->
+                <TextBlock Text="Username" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                <TextBox x:Name="UsernameBox"
+                         Height="35"
+                         FontSize="14"
+                         Padding="5"
+                         BorderBrush="#1976D2"
+                         BorderThickness="1"/>
+
+                <!-- Password -->
+                <TextBlock Text="Password" FontWeight="SemiBold" Margin="0,10,0,5"/>
+                <Grid>
+                    <PasswordBox x:Name="PasswordBox"
+                                 Height="35"
+                                 FontSize="14"
+                                 Padding="5"
+                                 BorderBrush="#1976D2"
+                                 BorderThickness="1"
+                                 Width="260"/>
+                    <TextBox x:Name="PasswordTextBox"
+                             Height="35"
+                             FontSize="14"
+                             Padding="5"
+                             BorderBrush="#1976D2"
+                             BorderThickness="1"
+                             Width="260"
+                             Visibility="Collapsed"/>
+                    <ToggleButton x:Name="ShowPasswordToggle"
+                                  Content="👁"
+                                  Width="35" Height="35"
+                                  HorizontalAlignment="Right"
+                                  VerticalAlignment="Center"
+                                  Checked="ShowPasswordToggle_Checked"
+                                  Unchecked="ShowPasswordToggle_Unchecked"/>
+                </Grid>
+
+                <!-- Login Button -->
+                <Button x:Name="BtnLogin"
+                        Content="Login"
+                        Height="40"
+                        Margin="0,20,0,0"
+                        Background="#1976D2"
+                        Foreground="White"
+                        FontWeight="Bold"
+                        BorderThickness="0"
+                        Click="BtnLogin_Click"/>
+
+                <!-- Progress Spinner -->
+                <StackPanel Orientation="Horizontal"
+                            HorizontalAlignment="Center"
+                            Margin="0,10,0,0"
+                            Visibility="Collapsed"
+                            x:Name="ProgressPanel">
+                    <ProgressBar Width="100" Height="10" IsIndeterminate="True"/>
+                    <TextBlock Text=" Logging in..."
+                               VerticalAlignment="Center"
+                               Margin="5,0,0,0"
+                               Foreground="#0D47A1"
+                               FontWeight="SemiBold"/>
+                </StackPanel>
+
+                <!-- Error Message -->
+                <TextBlock x:Name="MessageText"
+                           Foreground="Red"
+                           FontSize="13"
+                           TextAlignment="Center"
+                           Margin="0,10,0,0"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

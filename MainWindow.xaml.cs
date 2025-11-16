@@ -17,6 +17,8 @@ using System.IO;
 using SmartPOS.UI.Models;
 using SmartPOS.UI.Data;
 using System.Speech.Synthesis;
+using SmartPOS.UI.Helpers;
+
 
 
 
@@ -27,7 +29,19 @@ namespace SmartPOS.UI
         private ObservableCollection<Product> _products = new();
         private ObservableCollection<CartItem> _cartItems = new();
         private string? _searchQuery;
-        private string _currentUserDisplay = "Cashier: Admin";
+      private string _loggedInCashier = null;  
+
+private string _currentUserDisplay = "Cashier: Not Logged In";
+public string CurrentUserDisplay
+{
+    get => _currentUserDisplay;
+    set
+    {
+        _currentUserDisplay = value;
+        OnPropertyChanged(nameof(CurrentUserDisplay));
+    }
+}
+
         private const double TaxRate = 0.16;
 
         public ObservableCollection<Product> Products
@@ -35,7 +49,7 @@ namespace SmartPOS.UI
             get => _products;
             set { _products = value; OnPropertyChanged(); }
         }
-
+        
         public ObservableCollection<CartItem> CartItems
         {
             get => _cartItems;
@@ -46,12 +60,6 @@ namespace SmartPOS.UI
         {
             get => _searchQuery;
             set { _searchQuery = value; OnPropertyChanged(); }
-        }
-
-        public string CurrentUserDisplay
-        {
-            get => _currentUserDisplay;
-            set { _currentUserDisplay = value; OnPropertyChanged(); }
         }
 
         public double Subtotal => CartItems.Sum(c => c.TotalPrice);
@@ -82,6 +90,7 @@ namespace SmartPOS.UI
         public MainWindow()
         {
             InitializeComponent();
+
             DataContext = this;
 
             // Load products from ProductDatabase
@@ -104,6 +113,27 @@ namespace SmartPOS.UI
             StartUdpListener();
             SalesDatabase.Load();
         }
+        private bool EnsureCashierLoggedIn()
+{
+    if (!string.IsNullOrEmpty(_loggedInCashier))
+        return true; // already logged in
+
+    var loginWindow = new CashierLoginWindow { Owner = this };
+    bool? result = loginWindow.ShowDialog();
+
+    if (result == true)
+    {
+        _loggedInCashier = loginWindow.LoggedInCashier;
+        CurrentUserDisplay = $"Cashier: {_loggedInCashier}";
+        ShowToast($"✅ {_loggedInCashier} logged in successfully!");
+        return true;
+    }
+
+    // If login failed or cancelled
+    ShowToast("🛑 Login required! Contact admin for credentials.");
+    return false;
+}
+
 
         // Toast notifications
         private async void ShowToast(string message)
@@ -140,6 +170,31 @@ namespace SmartPOS.UI
                 BroadcastProduct(entryWindow);
             }
         }
+
+private void GoToAdminLogin(object sender, RoutedEventArgs e)
+{
+    string lastUser = LocalStorage.Get("admin_user");
+
+    // Get CURRENT window safely
+    Window current = Window.GetWindow(this);
+
+    if (!string.IsNullOrEmpty(lastUser))
+    {
+        DashboardWindow dashboard = new DashboardWindow(lastUser);
+        dashboard.Show();
+
+        current?.Close();
+        return;
+    }
+
+    AdminLoginWindow login = new AdminLoginWindow();
+    login.Show();
+
+    current?.Close();
+}
+
+
+
 
         // Barcode search
         private void SearchBox_KeyDown(object sender, KeyEventArgs e)
@@ -206,26 +261,47 @@ namespace SmartPOS.UI
 
         // Checkout
 private void Checkout(string method)
-        {
-    // After receipt printing and toast
-var saleRecord = new SaleRecord
 {
-    Date = DateTime.Now,
-    Cashier = CurrentUserDisplay,
-    PaymentMethod = method,
-    TotalAmount = TotalWithTax,
-    Items = new ObservableCollection<CartItem>(CartItems.Select(ci => 
-        new CartItem(ci.Product) { Quantity = ci.Quantity }))
-};
+    // Ensure a cashier is logged in first
+    if (string.IsNullOrEmpty(_loggedInCashier))
+    {
+        var loginWindow = new CashierLoginWindow { Owner = this };
+        bool? result = loginWindow.ShowDialog();
 
-SalesDatabase.Add(saleRecord);
+        if (result != true)
+        {
+            ShowToast("🛑 Login required! Contact admin for credentials.");
+            return; // stop checkout if login failed
+        }
 
+        // Update logged-in cashier
+        _loggedInCashier = loginWindow.LoggedInCashier;
+        CurrentUserDisplay = $"Cashier: {_loggedInCashier}";
+        ShowToast($"✅ {_loggedInCashier} logged in successfully!");
+    }
+
+    // Check if cart is empty
     if (!CartItems.Any()) 
     { 
         ShowToast("🛑 Cart is empty."); 
         return; 
     }
 
+    // Create sale record
+    var saleRecord = new SaleRecord
+    {
+        Date = DateTime.Now,
+        Cashier = _loggedInCashier,
+        PaymentMethod = method,
+        TotalAmount = TotalWithTax,
+        Items = new ObservableCollection<CartItem>(
+            CartItems.Select(ci => new CartItem(ci.Product) { Quantity = ci.Quantity })
+        )
+    };
+
+    SalesDatabase.Add(saleRecord);
+
+    // Generate receipt
     var receipt = GenerateReceipt();
 
     try
@@ -233,15 +309,15 @@ SalesDatabase.Add(saleRecord);
         // Print the receipt
         PrintReceipt(receipt);
 
-        // ✅ Show toast as before
         ShowToast($"✅ {method} payment complete. Printing receipt...");
 
-        // ✅ Speak confirmation immediately, non-blocking
-        var synth = new SpeechSynthesizer();
-        synth.Volume = 100;  // 0-100
-        synth.Rate = 0;      // normal speed
+        // Speak confirmation asynchronously
+        var synth = new SpeechSynthesizer
+        {
+            Volume = 100,
+            Rate = 0
+        };
 
-        // Select a female voice
         foreach (var v in synth.GetInstalledVoices())
         {
             if (v.VoiceInfo.Gender == VoiceGender.Female)
@@ -251,7 +327,6 @@ SalesDatabase.Add(saleRecord);
             }
         }
 
-        // Speak asynchronously so UI stays responsive
         synth.SpeakAsync("Payments received successfully. Thank you for shopping with us");
     }
     catch (Exception ex)

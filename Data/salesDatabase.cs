@@ -8,10 +8,25 @@ namespace SmartPOS.UI.Data
 {
     public static class SalesDatabase
     {
-        private static readonly string FilePath = 
-            Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "sales_data.json");
+        // AppData folder
+        private static readonly string AppFolder = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "SmartPOS");
+
+        private static readonly string FilePath = Path.Combine(AppFolder, "sales_data.json");
 
         public static ObservableCollection<SaleRecord> SalesList { get; private set; } = new();
+
+        static SalesDatabase()
+        {
+            // Ensure AppData directory exists
+            if (!Directory.Exists(AppFolder))
+                Directory.CreateDirectory(AppFolder);
+
+            // Ensure file exists
+            if (!File.Exists(FilePath))
+                File.WriteAllText(FilePath, "[]");
+        }
 
         public static void Load()
         {
@@ -38,8 +53,15 @@ namespace SmartPOS.UI.Data
 
         public static void Save()
         {
-            var json = JsonSerializer.Serialize(SalesList, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(FilePath, json);
+            try
+            {
+                var json = JsonSerializer.Serialize(SalesList, new JsonSerializerOptions { WriteIndented = true });
+                File.WriteAllText(FilePath, json);
+            }
+            catch
+            {
+                // Optional: handle errors silently or log
+            }
         }
     }
 }
